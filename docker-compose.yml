@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mgnrega_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mgnrega_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mgnrega_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-mgnrega_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mgnrega_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - mgnrega_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mgnrega_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - mgnrega_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mgnrega_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mgnrega_user}:${POSTGRES_PASSWORD:-mgnrega_pass}@postgres:5432/${POSTGRES_DB:-mgnrega_db}
+      REDIS_URL: redis://redis:6379/0
+      MGNREGA_API_KEY: ${MGNREGA_API_KEY:-}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: "true"
+    volumes:
+      - ./backend/app:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mgnrega_network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mgnrega_frontend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - mgnrega_network
+
+  # Data Ingestion Worker (manual execution)
+  ingest:
+    build:
+      context: ./ingest
+      dockerfile: Dockerfile
+    container_name: mgnrega_ingest
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mgnrega_user}:${POSTGRES_PASSWORD:-mgnrega_pass}@postgres:5432/${POSTGRES_DB:-mgnrega_db}
+      REDIS_URL: redis://redis:6379/0
+      MGNREGA_API_KEY: ${MGNREGA_API_KEY:-}
+    volumes:
+      - ./ingest:/app
+    command: tail -f /dev/null
+    # Alternative: Use cron for automated ingestion
+    # command: cron -f
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mgnrega_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  mgnrega_network:
+    driver: bridge
+
