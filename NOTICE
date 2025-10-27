@@ -1,0 +1,31 @@
+Our Voice, Our Rights - MGNREGA Transparency Dashboard
+
+Copyright (c) 2025 Kishore. All rights reserved.
+
+This project is part of the Digital India Initiative, designed to bring 
+transparency and accessibility to MGNREGA (Mahatma Gandhi National Rural 
+Employment Guarantee Act) performance metrics.
+
+Purpose:
+- Track district-wise MGNREGA performance in real-time
+- Provide interactive dashboards with trend analysis
+- Support low-literacy users with text-to-speech (TTS) functionality
+- Enable geolocation-based district selection
+- Ensure mobile-first, accessible design
+
+Technology Stack:
+- Backend: FastAPI (Python 3.11)
+- Frontend: React 18 with Vite 5
+- Database: PostgreSQL 15
+- Cache: Redis 7
+- Containerization: Docker & Docker Compose
+
+Data Source: data.gov.in (MGNREGA API)
+
+For questions or contributions, please contact:
+Email: kishorekishore1284@gmail.com
+
+Repository: https://github.com/Kishore1284/our-voice-our-rights
+
+Made with 🇮🇳 for transparency and accessibility
+
