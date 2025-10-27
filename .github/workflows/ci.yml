@@ -163,11 +163,7 @@ jobs:
     
     - name: Start services with Docker Compose
       run: |
-        if command -v docker-compose >/dev/null 2>&1; then
-          docker-compose up -d
-        else
-          docker compose up -d
-        fi
+        docker compose up -d 2>/dev/null || docker-compose up -d
     
     - name: Wait for services
       run: |
@@ -181,13 +177,9 @@ jobs:
       continue-on-error: true
     
     - name: Stop services
-      run: |
-        if command -v docker-compose >/dev/null 2>&1; then
-          docker-compose down
-        else
-          docker compose down
-        fi
       if: always()
+      run: |
+        docker compose down 2>/dev/null || docker-compose down
 
   # Build Check
   build-check:
